@@ -39,7 +39,7 @@ with st.sidebar:
             st.error(f"키 오류: {e}")
     st.info(f"모델: {target_model_id}")
 
-# 3. 언어 리스트 (힌디어 추가됨)
+# 3. 언어 리스트
 raw_langs = [
     "광둥어", "그리스어", "네덜란드어", "네팔어", "노르웨이어", "덴마크어", "독일어", "라틴어", "러시아어", 
     "룩셈부르크어", "마오리어", "말레이어", "몽골어", "민난어", "베트남어", "벵골어", "세르비아어", "스와힐리어", 
@@ -67,23 +67,30 @@ def detect_source_language(title, srt, api_key, model_id):
     try: return model.generate_content(prompt).text.strip()
     except: return "Unknown"
 
+# ▼▼▼▼▼ 수정된 핵심 부분 ▼▼▼▼▼
 def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="all"):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(model_id)
     lang_name = target_lang.split('. ')[1]
     
-    # [핵심] 제목 글자수 제한 및 특수문자 보존 명령 강화
-    common_instruction = """
+    # [핵심 변경사항] 프롬프트에 '강력한 현지화' 및 '혼용 금지' 규칙 추가
+    common_instruction = f"""
     [CRITICAL RULES]
-    1. Translated Title must be UNDER 99 CHARACTERS.
-    2. PRESERVE ALL EMOJIS, special characters, and punctuation from the original text.
-    3. Do NOT remove or change special symbols like @, #, $, %, etc.
+    1. **NO MIXED SCRIPTS:** The output must be 100% in {lang_name}. Do NOT leave any Korean (Hangul) or English characters.
+    2. **LOCALIZATION:** Translate specific food names or cultural terms into their meaning in {lang_name}.
+       - Example: "소고기무국" -> "Beef Radish Soup" (translated to {lang_name})
+       - Example: "석화구이" -> "Grilled Oysters" (translated to {lang_name})
+       - DO NOT transliterate/sound them out.
+    3. **TITLE LENGTH:** Translated Title must be UNDER 99 CHARACTERS.
+    4. **PRESERVE VISUALS:** Keep ALL emojis, special characters (@, #, $, %), and punctuation exactly as they are.
     """
     
     if mode == "all":
         prompt = f"""
-        Translate to {lang_name}.
+        You are a professional video translator.
+        Translate the following metadata and subtitles to naturally spoken **{lang_name}**.
         {common_instruction}
+        
         Output ONLY raw text separated by '|||'.
         Format: Title|||Description|||SRT
         Keep SRT timecodes exactly.
@@ -95,8 +102,9 @@ def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="al
         """
     elif mode == "meta":
         prompt = f"""
-        Translate to {lang_name}.
+        Translate the following metadata to naturally spoken **{lang_name}**.
         {common_instruction}
+        
         Output ONLY raw text separated by '|||'.
         Format: Title|||Description
         
@@ -106,13 +114,16 @@ def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="al
         """
     elif mode == "srt":
         prompt = f"""
-        Translate SRT to {lang_name}.
+        Translate the following SRT subtitles to naturally spoken **{lang_name}**.
+        {common_instruction}
+        
         Output ONLY raw SRT content.
         Keep timecodes exactly.
         
         [INPUT]
         SRT: {srt}
         """
+# ▲▲▲▲▲ 수정 끝 ▲▲▲▲▲
 
     try:
         response = model.generate_content(prompt)
@@ -256,7 +267,7 @@ def run_app():
 def display_single_result(lang, res, mode):
     with st.expander(f"✅ {lang} 완료", expanded=True):
         if "error" in res:
-            st.error(res["error"])
+            st.error(res["error"])  
         else:
             if mode in ["all", "meta"] and res.get("title"):
                 st.caption(f"제목 ({len(res['title'])}자)")
