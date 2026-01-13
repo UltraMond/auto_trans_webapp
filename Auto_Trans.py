@@ -6,7 +6,7 @@ import io
 import re
 import pandas as pd
 
-# 1. 페이지 설정 (브라우저 탭 이름도 깔끔하게 변경)
+# 1. 페이지 설정
 st.set_page_config(page_title="Auto Trans", layout="wide")
 
 # 세션 상태 초기화
@@ -39,8 +39,16 @@ with st.sidebar:
             st.error(f"키 오류: {e}")
     st.info(f"모델: {target_model_id}")
 
-# 3. 언어 리스트
-raw_langs = ["광둥어", "그리스어", "네덜란드어", "네팔어", "노르웨이어", "덴마크어", "독일어", "라틴어", "러시아어", "룩셈부르크어", "마오리어", "말레이어", "몽골어", "민난어", "베트남어", "벵골어", "세르비아어", "스와힐리어", "스웨덴어", "스페인어", "슬로바키아어", "슬로베니아어", "아랍어", "아이슬란드어", "아일랜드어", "영어", "우르두어", "우즈베크어", "우크라이나어", "이탈리아어", "인도네시아어", "일본어", "중국어(간체)", "중국어(번체)", "체코어", "태국어", "튀르키예어", "페르시아어", "포르투갈어", "포르투갈어(브라질)", "포르투갈어(포르투갈)", "폴란드어", "프랑스어", "핀란드어", "필리핀어", "하와이어", "헝가리어", "히브리어", "한국어"]
+# 3. 언어 리스트 (힌디어 추가됨)
+raw_langs = [
+    "광둥어", "그리스어", "네덜란드어", "네팔어", "노르웨이어", "덴마크어", "독일어", "라틴어", "러시아어", 
+    "룩셈부르크어", "마오리어", "말레이어", "몽골어", "민난어", "베트남어", "벵골어", "세르비아어", "스와힐리어", 
+    "스웨덴어", "스페인어", "슬로바키아어", "슬로베니아어", "아랍어", "아이슬란드어", "아일랜드어", "영어", 
+    "우르두어", "우즈베크어", "우크라이나어", "이탈리아어", "인도네시아어", "일본어", "중국어(간체)", 
+    "중국어(번체)", "체코어", "태국어", "튀르키예어", "페르시아어", "포르투갈어", "포르투갈어(브라질)", 
+    "포르투갈어(포르투갈)", "폴란드어", "프랑스어", "핀란드어", "필리핀어", "하와이어", "한국어", "헝가리어", 
+    "히브리어", "힌디어"
+]
 languages = [f"{i+1:02d}. {lang}" for i, lang in enumerate(sorted(raw_langs))]
 
 # 4. 기능 함수
@@ -64,12 +72,18 @@ def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="al
     model = genai.GenerativeModel(model_id)
     lang_name = target_lang.split('. ')[1]
     
-    constraint_title = "CRITICAL: Translated Title must be UNDER 99 CHARACTERS. Summarize if necessary."
+    # [핵심] 제목 글자수 제한 및 특수문자 보존 명령 강화
+    common_instruction = """
+    [CRITICAL RULES]
+    1. Translated Title must be UNDER 99 CHARACTERS.
+    2. PRESERVE ALL EMOJIS, special characters, and punctuation from the original text.
+    3. Do NOT remove or change special symbols like @, #, $, %, etc.
+    """
     
     if mode == "all":
         prompt = f"""
         Translate to {lang_name}.
-        {constraint_title}
+        {common_instruction}
         Output ONLY raw text separated by '|||'.
         Format: Title|||Description|||SRT
         Keep SRT timecodes exactly.
@@ -82,7 +96,7 @@ def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="al
     elif mode == "meta":
         prompt = f"""
         Translate to {lang_name}.
-        {constraint_title}
+        {common_instruction}
         Output ONLY raw text separated by '|||'.
         Format: Title|||Description
         
@@ -127,7 +141,7 @@ def translate_content(title, desc, srt, target_lang, api_key, model_id, mode="al
             
     except Exception as e: return {"error": str(e)}
 
-# 5. 메인 UI (제목 수정됨)
+# 5. 메인 UI
 st.title("🎬 Auto Trans")
 
 col_in, col_opt = st.columns([2, 1])
@@ -180,7 +194,6 @@ def run_app():
             targets = [l for l in selected_list if detected not in l]
             total_targets = len(targets)
             
-            # 진행률 바
             progress_bar = st.progress(0, text="작업 준비 중...")
             
             live_container = st.container()
@@ -193,8 +206,9 @@ def run_app():
                     display_single_result(lang, res, start_mode)
                 
                 # 진행률 업데이트
-                percent = (i + 1) / total_targets
-                progress_bar.progress(percent, text=f"⏳ 진행률: {int(percent*100)}% ({lang} 완료)")
+                if total_targets > 0:
+                    percent = (i + 1) / total_targets
+                    progress_bar.progress(percent, text=f"⏳ 진행률: {int(percent*100)}% ({lang} 완료)")
                 
                 time.sleep(0.5)
             
@@ -205,7 +219,7 @@ def run_app():
         for lang, res in st.session_state.results.items():
             display_single_result(lang, res, current_mode)
 
-    # 다운로드 버튼 영역
+    # 다운로드 버튼
     if st.session_state.results:
         st.markdown("---")
         d_col1, d_col2 = st.columns(2)
