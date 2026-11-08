@@ -30,8 +30,8 @@ with st.sidebar:
     st.header("⚙️ 설정")
     api_key = st.text_input("Gemini API Key (유료)", type="password")
     
-    # ▼▼▼▼▼ 모델 수정됨 ▼▼▼▼▼
-    target_model_id = "gemini-2.5-flash-lite" 
+    # ▼▼▼▼▼ 오류를 반영하여 3.5-flash-lite로 수정됨 ▼▼▼▼▼
+    target_model_id = "gemini-3.5-flash-lite" 
     
     if api_key:
         try:
