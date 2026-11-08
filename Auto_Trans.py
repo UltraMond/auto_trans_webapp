@@ -29,12 +29,14 @@ st.markdown("""
 with st.sidebar:
     st.header("⚙️ 설정")
     api_key = st.text_input("Gemini API Key (유료)", type="password")
-    target_model_id = "gemini-2.0-flash" 
+    
+    # ▼▼▼▼▼ 모델 수정됨 ▼▼▼▼▼
+    target_model_id = "gemini-2.5-flash-lite" 
     
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            st.success("⚡ Gemini 2.0 Flash 연결됨")
+            st.success("⚡ Gemini 연결됨")
         except Exception as e:
             st.error(f"키 오류: {e}")
     st.info(f"모델: {target_model_id}")
